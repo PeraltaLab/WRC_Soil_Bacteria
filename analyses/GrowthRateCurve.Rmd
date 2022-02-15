@@ -1,0 +1,215 @@
+---
+title: "GrowthRate_BacterialIsolates"
+author: "Aied Garcia"
+date: "2/14/2022"
+output: html_document
+---
+
+## Initial Setup
+```{r Initial Setup, include=TRUE}
+rm(list=ls())
+setwd("~/GitHub/WRC_Soil_Bacteria/analyses")
+
+library("ggplot2")
+library("nlme")
+library("bbmle")
+library("optimx")
+require("tidyverse")
+```
+
+
+```{r}
+Bac_LC <- read.csv("../data/WRC320_WRC278_GR.csv")
+
+ggplot(Bac_LC, aes(x = Hour, y = Growth1, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("L. cresolivorans Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_LC, aes(x = Hour, y = Growth2, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("L. cresolivorans Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_LC, aes(x = Hour, y = Growth3, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("L. cresolivorans Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+```
+
+
+```{r}
+Bac_BP <- read.csv("../data/WRC299_WRC294_GR.csv")
+
+ggplot(Bac_BP, aes(x = Hour, y = Growth1, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("B. pacificus Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_BP, aes(x = Hour, y = Growth2, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("B. pacificus Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_BP, aes(x = Hour, y = Growth3, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("B. pacificus Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+```
+
+
+```{r}
+Bac_BC <- read.csv("../data/WRC363_WRC289_GR.csv")
+
+ggplot(Bac_BC, aes(x = Hour, y = Growth1, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("B. cereus Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_BC, aes(x = Hour, y = Growth2, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("B. cereus Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_BC, aes(x = Hour, y = Growth3, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("B. cereus Growth Rate") +
+  xlab("Hour") + ylab("Growth") +scale_color_manual(values=c("gray48","forestgreen"))
+```
+
+
+```{r}
+Bac_CP <- read.csv("../data/WRC281_WRC283_GR.csv")
+
+ggplot(Bac_CP, aes(x = Hour, y = Growth1, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("C. pratensis Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_CP, aes(x = Hour, y = Growth2, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("C. pratensis Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_CP, aes(x = Hour, y = Growth3, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("C. pratensis Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+```
+
+
+```{r}
+Bac_PC <- read.csv("../data/WRC288_WRC246_GR.csv")
+
+ggplot(Bac_PC, aes(x = Hour, y = Growth1, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("P. corrugata Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_PC, aes(x = Hour, y = Growth2, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("P. corrugata Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_PC, aes(x = Hour, y = Growth3, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("P. corrugata Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+```
+
+
+```{r}
+Bac_PK <- read.csv("../data/WRC315_WRC271_GR.csv")
+
+ggplot(Bac_PK, aes(x = Hour, y = Growth1, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("P. koreensis Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_PK, aes(x = Hour, y = Growth2, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("P. koreensis Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+ggplot(Bac_PK, aes(x = Hour, y = Growth3, color=Treatment)) +
+  geom_point()+geom_smooth() +
+  theme(axis.text.x = element_text(angle=90)) +
+  ggtitle("P. koreensis Growth Rate") +
+  xlab("Hour") + ylab("Growth") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+```
+
+
+Write out some growth functions.  In all these functions
+A = the asymptotic body mass (or size)
+k = growth rate constant
+t = age or time
+T_i = age or time at the inﬂection
+
+```{r}
+logistic<-function(A,k,t=t,T_i){
+  A/1+exp(-k*(t-T_i))
+}
+gompertz<-function(A,k,t,T_i){
+  A*exp(-exp(-k*(t-T_i)))
+}
+EVF<-function(A,k,t,T_i){
+  A*(1-exp(-exp(k*(t-T_i))))
+}
+Bertalanffy<-function(A,k,t,T_i){
+  A*(1-exp(-k*(t+T_i)))^3
+}
+```
+
+
+First I will use nonlinear least squares to get good starting values for the mle fits
+```{r}
+d=data.frame(y=Bac_LC$Growth1,t=Bac_LC$Hour+1,Treatment=Bac_LC$Treatment)
+d=na.omit(d)
+
+logistic.=formula(y~ A/1+exp(-k*(t-T_i))|Treatment)#cant fit
+Bertalanf=formula(y~ A*(1-exp(-k*(t+T_i)))^3|Treatment)#cant fit
+
+gompz=formula(y~A*exp(-exp(-k*(t-T_i)))|Treatment)
+m_g <- nlsList(gompz,start=list(A=150,k=0.5,T_i=25),data=d)
+m_g
+
+EVF=formula(y~A*(1-exp(-exp(k*(t-T_i))))|Treatment) 
+m_E <- nlsList(EVF,start=list(A=150,k=0.5,T_i=25),data=d)
+m_E
+```
+
+
