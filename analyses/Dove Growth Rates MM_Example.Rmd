@@ -1,0 +1,278 @@
+---
+title: "Dove Growth Rates"
+author: "Kristen Orr"
+date: "11/5/2021"
+output: html_document
+---
+
+```{r}
+rm(list=ls())
+setwd("~/GitHub/WRC_Soil_Bacteria/analyses")
+library("ggplot2")
+```
+
+```{r}
+chickfull <- read.csv("../data/Example_FullChickMeasurements.csv",na = c(""))
+
+ggplot(chickfull, aes(x = day, y = weight, color=treat)) +
+  geom_point()+geom_smooth()
+```
+Write out some growth functions.  In all these functions
+A = the asymptotic body mass (or size)
+k = growth rate constant
+t = age or time
+T_i = age or time at the inﬂection
+
+```{r}
+logistic<-function(A,k,t=t,T_i){
+  A/1+exp(-k*(t-T_i))
+}
+gompertz<-function(A,k,t,T_i){
+  A*exp(-exp(-k*(t-T_i)))
+}
+EVF<-function(A,k,t,T_i){
+  A*(1-exp(-exp(k*(t-T_i))))
+}
+Bertalanffy<-function(A,k,t,T_i){
+  A*(1-exp(-k*(t+T_i)))^3
+}
+```
+First I will use nonlinear least squares to get good starting values for the mle fits
+```{r}
+d=data.frame(y=chickfull$weight,t=chickfull$day+1,treat=chickfull$treat)
+d=na.omit(d)
+
+library(nlme)
+logistic.=formula(y~ A/1+exp(-k*(t-T_i))|treat)#cant fit
+Bertalanf=formula(y~ A*(1-exp(-k*(t+T_i)))^3|treat)#cant fit
+
+gompz=formula(y~A*exp(-exp(-k*(t-T_i)))|treat)
+m_g <- nlsList(gompz,start=list(A=150,k=0.5,T_i=25),data=d)
+m_g
+
+EVF=formula(y~A*(1-exp(-exp(k*(t-T_i))))|treat) 
+m_E <- nlsList(EVF,start=list(A=150,k=0.5,T_i=25),data=d)
+m_E
+```
+
+Now I will write MLE functions to estimate the parameters for 4 models and compare them with AIC.  I was only to successfully fit the Gompertz and the EVF models (Williams 1995).  For each model I fit the parameters to the pooled data (null model) and allowing different parameters for each treatment.  
+```{r}
+library(bbmle)
+library(optimx)
+startlist1=list(A=coef(m_g)[1,1],k=coef(m_g)[1,2],T_i=coef(m_g)[1,3],stdv=1)
+
+mod_gomp_1=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist1,  
+        parameters=list(A~1,k~1,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2=list(A=coef(m_g)[,1],k=coef(m_g)[,2],T_i=coef(m_g)[,3],stdv=1)
+mod_gomp_2=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2,  
+        parameters=list(A~treat,k~treat,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2a=list(A=coef(m_g)[,1],k=coef(m_g)[,2],T_i=coef(m_g)[1,3],stdv=1)
+mod_gomp_2a=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2a,  
+        parameters=list(A~treat,k~treat,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2b=list(A=coef(m_g)[,1],k=coef(m_g)[1,2],T_i=coef(m_g)[,3],stdv=1)
+mod_gomp_2b=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2b,  
+        parameters=list(A~treat,k~1,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2c=list(A=coef(m_g)[1,1],k=coef(m_g)[,2],T_i=coef(m_g)[,3],stdv=1)
+mod_gomp_2c=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2c,  
+        parameters=list(A~1,k~treat,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2d=list(A=coef(m_g)[,1],k=coef(m_g)[1,2],T_i=coef(m_g)[1,3],stdv=1)
+mod_gomp_2d=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2d,  
+        parameters=list(A~treat,k~1,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2e=list(A=coef(m_g)[1,1],k=coef(m_g)[,2],T_i=coef(m_g)[1,3],stdv=1)
+mod_gomp_2e=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2e,  
+        parameters=list(A~1,k~treat,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist2f=list(A=coef(m_g)[1,1],k=coef(m_g)[1,2],T_i=coef(m_g)[,3],stdv=1)
+mod_gomp_2f=suppressWarnings(mle2(y ~ dnorm(gompertz(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist2f,  
+        parameters=list(A~1,k~1,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist3=list(A=coef(m_E)[1,1],k=coef(m_E)[1,2],T_i=coef(m_E)[1,3],stdv=15)
+
+mod_EVF_1=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist3,  
+        parameters=list(A~1,k~1,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4=list(A=coef(m_E)[,1],k=coef(m_E)[,2],T_i=coef(m_E)[,3],stdv=1)
+mod_EVF_2=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4,  
+        parameters=list(A~treat,k~treat,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4a=list(A=coef(m_E)[,1],k=coef(m_E)[,2],T_i=coef(m_E)[1,3],stdv=1)
+mod_EVF_2a=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4a,  
+        parameters=list(A~treat,k~treat,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4b=list(A=coef(m_E)[,1],k=coef(m_E)[1,2],T_i=coef(m_E)[,3],stdv=1)
+mod_EVF_2b=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4b,  
+        parameters=list(A~treat,k~1,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4c=list(A=coef(m_E)[1,1],k=coef(m_E)[,2],T_i=coef(m_E)[,3],stdv=1)
+mod_EVF_2c=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4c,  
+        parameters=list(A~1,k~treat,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4d=list(A=coef(m_E)[,1],k=coef(m_E)[1,2],T_i=coef(m_E)[1,3],stdv=1)
+mod_EVF_2d=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4d,  
+        parameters=list(A~treat,k~1,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4e=list(A=coef(m_E)[1,1],k=coef(m_E)[,2],T_i=coef(m_E)[1,3],stdv=1)
+mod_EVF_2e=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4e,  
+        parameters=list(A~1,k~treat,T_i~1),method="bobyqa",
+      skip.hessian=FALSE))
+
+startlist4f=list(A=coef(m_E)[1,1],k=coef(m_E)[1,2],T_i=coef(m_E)[,3],stdv=1)
+mod_EVF_2f=suppressWarnings(mle2(y ~ dnorm(EVF(A,k,t=t,T_i),sd=stdv),#
+        data = d,
+       optimizer = "optimx",
+        start = startlist4f,  
+        parameters=list(A~1,k~1,T_i~treat),method="bobyqa",
+      skip.hessian=FALSE))
+
+ICtab(mod_gomp_1,mod_gomp_2,mod_EVF_1,mod_EVF_2,mod_gomp_2a,mod_gomp_2b,mod_gomp_2c,mod_gomp_2d,mod_gomp_2e,mod_gomp_2f,mod_EVF_2a,mod_EVF_2b,mod_EVF_2c,mod_EVF_2d,mod_EVF_2e,mod_EVF_2f,type="AICc",delta=T,nobs=nrow(d),weights=TRUE)
+```
+
+
+
+```{r}
+d$pred <- predict(mod_gomp_2f)
+mod_gomp_2f
+ggplot(d, aes(x = t, y = y, color=treat)) +
+  geom_point()+
+  geom_function(fun = gompertz, args = list(A=coef(mod_gomp_2f)[1],k=coef(mod_gomp_2f)[2],T_i=coef(mod_gomp_2f)[3]),color="red")+
+  geom_function(fun = gompertz, args = list(A=coef(mod_gomp_2f)[1],k=coef(mod_gomp_2f)[2],T_i=coef(mod_gomp_2f)[3]+coef(mod_gomp_2f)[4]),color="green")+
+  geom_function(fun = gompertz, args = list(A=coef(mod_gomp_2f)[1],k=coef(mod_gomp_2f)[2],T_i=coef(mod_gomp_2f)[3]+coef(mod_gomp_2f)[5]),color="blue")
+```
+Zoom in on first 75 days
+```{r}
+ggplot(d, aes(x = t, y = y, color=treat)) +
+  geom_point()+
+  theme_classic() +
+  scale_color_manual(values = c("olivedrab3", "cyan4", "purple4")) +
+  geom_function(fun = gompertz, args = list(A=coef(mod_gomp_2f)[1],k=coef(mod_gomp_2f)[2],T_i=coef(mod_gomp_2f)[3]),color="olivedrab3")+
+  geom_function(fun = gompertz, args = list(A=coef(mod_gomp_2f)[1],k=coef(mod_gomp_2f)[2],T_i=coef(mod_gomp_2f)[3]+coef(mod_gomp_2f)[4]),color="cyan4")+
+  geom_function(fun = gompertz, args = list(A=coef(mod_gomp_2f)[1],k=coef(mod_gomp_2f)[2],T_i=coef(mod_gomp_2f)[3]+coef(mod_gomp_2f)[5]),color="purple4")+xlim(0,75)
+```
+
+
+
+
+```{r}
+chickfullbci <- read.csv("~/Desktop/ECU/Research/Analysis/Weight & BCI/FullChickBCI.csv",na = c(""))
+
+ggplot(chickfullbci, aes(x = day, y = bci, color=treat)) +
+  geom_point()+
+  scale_color_manual(values = c("olivedrab3", "cyan4", "purple4"))
+
+
+require(tidyverse)
+
+new.chickbci <- filter(chickfullbci) %>%
+  mutate(age_group=cut(day, breaks = c(0,150,250),
+             labels = c("Young","Old"), right = TRUE))
+
+new.chickbci_young <- new.chickbci %>% 
+  filter(age_group=="Young")
+
+new.chickbci_old <- new.chickbci %>% 
+  filter(age_group=="Old")
+
+
+oldbcigraph <- ggplot(new.chickbci_old, aes(x = treat, y = bci, color=as.factor(treat))) +
+  theme_classic() +
+  scale_color_manual(values = c("olivedrab3", "cyan4", "purple4")) +
+  geom_boxplot() +
+  geom_point()
+
+oldbcigraph
+
+
+
+```
+```{r}
+chickfull <- read.csv("FullChickMeasurements.csv",na = c(""))
+
+ggplot(chickfull, aes(x = day, y = weight, color=treat)) +
+  geom_point()+geom_smooth()
+
+
+new.chick <- filter(chickfull) %>%
+  mutate(age_group=cut(day, breaks = c(0,150,250),
+             labels = c("Young","Old"), right = TRUE))
+
+new.chick_young <- new.chick %>% 
+  filter(age_group=="Young")
+
+new.chick_old <- new.chick %>% 
+  filter(age_group=="Old")
+
+
+oldgraph <- ggplot(new.chick_old, aes(x = treat, y = weight, color=as.factor(treat))) +
+  theme_classic() +
+  scale_color_manual(values = c("olivedrab3", "cyan4", "purple4")) +
+  geom_boxplot() +
+  geom_point()
+
+oldgraph
+```
+
