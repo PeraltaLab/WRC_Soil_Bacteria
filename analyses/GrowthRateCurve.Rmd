@@ -15,6 +15,14 @@ library("nlme")
 library("bbmle")
 library("optimx")
 require("tidyverse")
+
+# Load custom scripts
+source("../bin/read.synergy.R")
+```
+
+# Import Data
+```{r}
+test <- read.synergy(input = "../data/Peralta_48well_24hr_WRC278M_WRC320MF.csv")
 ```
 
 
