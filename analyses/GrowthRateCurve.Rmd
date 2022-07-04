@@ -1,186 +1,194 @@
 ---
 title: "GrowthRate_BacterialIsolates"
-author: "Aied Garcia"
-date: "2/14/2022"
-output: html_document
+author: "Aied Garcia, Ariane L Peralta"
+date: "Last updated on `r format(Sys.time(), '%d %B, %Y')`"
+#output:
+  #pdf_document: null
+  #editor_options: null
+  #fig_caption: yes
+  #html_document: default
+  #word_document: default
+  #chunk_output_type: 
 ---
 
-## Initial Setup
-```{r Initial Setup, include=TRUE}
-rm(list=ls())
-setwd("~/GitHub/WRC_Soil_Bacteria/analyses")
 
+```{r setup, include=FALSE}
+## Clears R environment
+rm(list = ls())
+
+#set working directory
+setwd("~/GitHub/Bacterial_Growth_Curves")
+
+## Load packages
 library("ggplot2")
 library("nlme")
 library("bbmle")
 library("optimx")
 require("tidyverse")
 
-# Load custom scripts
+## Load custom scripts
 source("../bin/read.synergy.R")
 ```
 
 # Import Data
 ```{r}
-test <- read.synergy(input = "../data/Peralta_48well_24hr_WRC278M_WRC320MF.csv")
-```
+# EXAMPLE - importing data to prepare for graphing using ggplot2
 
+Lysinibacillus <- read.synergy(input = "../data/Peralta_48well_24hr_WRC278M_WRC320MF.csv")
+
+#Lysinibacillus spp. WRC320MF=D2,D4,D6; WRC278M = B2,B4,B6
+
+#average replicate measurements
+Lysinibacillus$LysMean_MF <- rowMeans(Lysinibacillus[,c("D2","D4","D6")])
+Lysinibacillus$LysMean_M <- rowMeans(Lysinibacillus[,c("B2","B4","B6")])
+dim(Lysinibacillus) #49 rows, 52 columns - columns 51 and 52 are the newly calculated values
+
+#subset columns Time and mean growth rates from previous calculation
+Lys_graph <- Lysinibacillus[c(1,51:52)]
+
+# function stacks columns of mean growth
+Lys_graph_long <- pivot_longer(Lys_graph, cols=2:3, names_to = "Treatment", values_to = "meanGrowth", values_drop_na = FALSE)
+str(Lys_graph_long)
+Lys_graph_long$Treatment <- as.factor(Lys_graph_long$Treatment)
+
+# GRAPH
+Lys <- ggplot(Lys_graph_long, aes(x = Time, y = meanGrowth, color=Treatment)) +
+  geom_point() + geom_smooth() + theme_bw() +
+  scale_color_manual(name="Treatment", values=c("gray70", "darkgreen"), labels = c("unfertilized/mowed", "fertilized/mowed")) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Lysinibacillus spp.") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Time (hour)") + ylab("Absorbance 600 nm")
+
+Lys
+
+ggsave("../figures/Lys.png", plot=Lys, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
+```
+# Code for ASM Microbe 2022 poster - Smith, Garcia, Peralta
+```{r}
+Bac_BP <- read.csv("../data/WRC288_WRC246_GR.csv")
+
+#average replicates
+Bac_BP$meanGrowth <- rowMeans(Bac_BP[,c("Growth1","Growth2","Growth3")]) 
+str(Bac_BP)
+
+Pcorrugata <- ggplot(Bac_BP, aes(x = Hour, y = meanGrowth, color=Treatment)) +
+  geom_point() + geom_smooth() + theme_bw() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Pseudomonas corrugata") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Hour") + ylab("Absorbance 600 nm") +
+  scale_color_manual(values=c("gray48","forestgreen"))
+
+Pcorrugata
+
+ggsave("../figures/Pcorrugata.png", plot=Pcorrugata, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
+```
 
 ```{r}
-Bac_LC <- read.csv("../data/WRC320_WRC278_GR.csv")
+Bac_BP_2 <- read.csv("../data/WRC283M_WRC281MF.csv")
 
-ggplot(Bac_LC, aes(x = Hour, y = Growth1, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("L. cresolivorans Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
+#average replicates
+Bac_BP_2$meanGrowth <- rowMeans(Bac_BP_2[,c("Growth1","Growth2","Growth3")]) 
+str(Bac_BP_2)
+
+Cpratensis <- ggplot(Bac_BP_2, aes(x = Hour, y = meanGrowth, color=Treatment)) +
+  geom_point() + geom_smooth() + theme_bw() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Collimonas pratensis") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Hour") + ylab("Absorbance 600 nm") +
   scale_color_manual(values=c("gray48","forestgreen"))
 
-ggplot(Bac_LC, aes(x = Hour, y = Growth2, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("L. cresolivorans Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
+Cpratensis
 
-ggplot(Bac_LC, aes(x = Hour, y = Growth3, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("L. cresolivorans Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
+ggsave("../figures/Cpratensis.png", plot=Cpratensis, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
 ```
-
 
 ```{r}
-Bac_BP <- read.csv("../data/WRC299_WRC294_GR.csv")
+Bac_BP_3 <- read.csv("../data/WRC271M_WRC315MF.csv")
 
-ggplot(Bac_BP, aes(x = Hour, y = Growth1, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("B. pacificus Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
+#average replicates
+Bac_BP_3$meanGrowth <- rowMeans(Bac_BP_3[,c("Growth1","Growth2","Growth3")]) 
+str(Bac_BP_3)
+
+Pkoreensis <- ggplot(Bac_BP_3, aes(x = Hour, y = meanGrowth, color=Treatment)) +
+  geom_point() + geom_smooth() + theme_bw() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Pseudomonas koreensis") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Hour") + ylab("Absorbance 600 nm") +
   scale_color_manual(values=c("gray48","forestgreen"))
 
-ggplot(Bac_BP, aes(x = Hour, y = Growth2, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("B. pacificus Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
+Pkoreensis
 
-ggplot(Bac_BP, aes(x = Hour, y = Growth3, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("B. pacificus Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
+ggsave("../figures/Pkoreensis.png", plot=Pkoreensis, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
 ```
-
 
 ```{r}
-Bac_BC <- read.csv("../data/WRC363_WRC289_GR.csv")
+Bac_BP_4 <- read.csv("../data/WRC263_WRC267.csv")
 
-ggplot(Bac_BC, aes(x = Hour, y = Growth1, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("B. cereus Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
+#average replicates
+Bac_BP_4$meanGrowth <- rowMeans(Bac_BP_4[,c("Growth1","Growth2","Growth3")]) 
+str(Bac_BP_4)
+
+Aramosus <- ggplot(Bac_BP_4, aes(x = Hour, y = meanGrowth, color=Treatment)) +
+  geom_point() + geom_smooth() + theme_bw() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Arthrobacter ramosus") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Hour") + ylab("Absorbance 600 nm") +
   scale_color_manual(values=c("gray48","forestgreen"))
 
-ggplot(Bac_BC, aes(x = Hour, y = Growth2, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("B. cereus Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
+Aramosus
 
-ggplot(Bac_BC, aes(x = Hour, y = Growth3, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("B. cereus Growth Rate") +
-  xlab("Hour") + ylab("Growth") +scale_color_manual(values=c("gray48","forestgreen"))
+ggsave("../figures/Aramosus.png", plot=Aramosus, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
 ```
-
-
-```{r}
-Bac_CP <- read.csv("../data/WRC281_WRC283_GR.csv")
-
-ggplot(Bac_CP, aes(x = Hour, y = Growth1, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("C. pratensis Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-
-ggplot(Bac_CP, aes(x = Hour, y = Growth2, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("C. pratensis Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-
-ggplot(Bac_CP, aes(x = Hour, y = Growth3, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("C. pratensis Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-```
-
-
-```{r}
-Bac_PC <- read.csv("../data/WRC288_WRC246_GR.csv")
-
-ggplot(Bac_PC, aes(x = Hour, y = Growth1, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("P. corrugata Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-
-ggplot(Bac_PC, aes(x = Hour, y = Growth2, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("P. corrugata Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-
-ggplot(Bac_PC, aes(x = Hour, y = Growth3, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("P. corrugata Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-```
-
-
-```{r}
-Bac_PK <- read.csv("../data/WRC315_WRC271_GR.csv")
-
-ggplot(Bac_PK, aes(x = Hour, y = Growth1, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("P. koreensis Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-
-ggplot(Bac_PK, aes(x = Hour, y = Growth2, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("P. koreensis Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-
-ggplot(Bac_PK, aes(x = Hour, y = Growth3, color=Treatment)) +
-  geom_point()+geom_smooth() +
-  theme(axis.text.x = element_text(angle=90)) +
-  ggtitle("P. koreensis Growth Rate") +
-  xlab("Hour") + ylab("Growth") +
-  scale_color_manual(values=c("gray48","forestgreen"))
-```
-
-
 Write out some growth functions.  In all these functions
 A = the asymptotic body mass (or size)
 k = growth rate constant
