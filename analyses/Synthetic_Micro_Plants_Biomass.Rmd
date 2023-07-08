@@ -1,0 +1,100 @@
+---
+title: "fertilization effects on plant-bacteria associations"
+author: "Aied Garcia, Kai Davis, Ariane L Peralta"
+date: "Last updated on `r format(Sys.time(), '%d %B, %Y')`"
+#output:
+  #pdf_document: null
+  #editor_options: null
+  #fig_caption: yes
+  #html_document: default
+  #word_document: default
+  #chunk_output_type: 
+---
+
+
+```{r setup, include=FALSE}
+## Clears R environment
+rm(list = ls())
+
+#set working directory
+setwd("~/GitHub/WRC_Soil_Bacteria")
+
+## Load packages
+library("ggplot2")
+library("nlme")
+library("bbmle")
+library("optimx")
+require("tidyverse")
+```
+
+# Import Data
+```{r}
+file_path <- ("~/GitHub/WRC_Soil_Bacteria/data/CLaxum_Biomass_Rstats.csv")
+Claxum <- read.csv(file_path, row.names=1)
+dim(Claxum) #75  9
+Claxum$Microbe <- as.factor(Claxum$Microbe)
+Claxum$FERT_num <- as.factor(Claxum$FERT_num)
+str(Claxum)
+
+Abovegr_aov <- aov(Aboveground_g ~ FERT_num*Microbe, data=Claxum)
+summary(Abovegr_aov)
+
+library(emmeans)
+emmeans(Abovegr_aov, pairwise ~ Microbe)
+
+# GRAPH
+abovegr <- ggplot(Claxum, aes(x = FERT_num, y = Aboveground_g, color=Microbe)) +
+  theme_bw() + geom_boxplot() + 
+  geom_point(aes(color=Microbe), size=1, position = position_jitterdodge()) +
+  scale_color_manual(name="Inocula Source", 
+                     values=c("blue", "darkgreen", "gray70"), 
+                     labels = c("control (-bact)","fertilized (+bact)", "unfertilized (+bact)")) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    #coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Aboveground Biomass") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Fertilization Gradient") + ylab("Biomass (grams)")
+
+abovegr
+
+ggsave("../figures/Claxum_aboveground.png", plot=abovegr, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
+
+Belowgr_aov <- aov(Belowground_g ~ FERT_num*Microbe, data=Claxum)
+summary(Belowgr_aov)
+
+emmeans(Belowgr_aov, pairwise ~ Microbe)
+emmeans(Belowgr_aov, pairwise ~ FERT_num)
+
+belowgr <- ggplot(Claxum, aes(x = FERT_num, y = Belowground_g, color=Microbe)) +
+  theme_bw() + geom_boxplot() + 
+  geom_point(aes(color=Microbe), size=1, position = position_jitterdodge()) +
+  scale_color_manual(name="Inocula Source", 
+                     values=c("blue", "darkgreen", "gray70"), 
+                     labels = c("control (-bact)","fertilized (+bact)", "unfertilized (+bact)")) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    #coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("Belowground Root Biomass") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Fertilization Gradient") + ylab("Biomass (grams)")
+
+belowgr
+
+ggsave("../figures/Claxum_belowground.png", plot=belowgr, device=NULL, path=NULL, scale=1, width=6, height=4, dpi=300, limitsize=TRUE)
+
+```
