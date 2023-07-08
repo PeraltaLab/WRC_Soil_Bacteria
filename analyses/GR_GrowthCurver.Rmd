@@ -1,0 +1,151 @@
+---
+title: "GrowthRate_BacterialIsolates"
+author: "Aied Garcia"
+date: "2/14/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+rm(list=ls()) 
+```
+
+
+```{r}
+#install.packages("growthcurver","nlme","bbmle","optimx","tidyverse")
+```
+
+
+```{r}
+library("ggplot2")
+library("nlme")
+library("bbmle")
+library("optimx")
+require("tidyverse")
+library("tidyr")
+library("growthcurver")
+```
+
+
+```{r}
+read.synergy <- function(input = " ", sep = ","){
+  temp <- readLines(input, warn = F)
+  t0 <- which(grepl("0:00:00", temp))[1]
+  tf <- which(grepl("Results", temp)) - 2
+  data.in <- read.csv2(input, sep = ",", header = F)
+  names <- as.character(data.in[t0 - 1, ])
+  names[2] <- "Temp"
+  data.out <- data.in[t0:tf, ]
+  colnames(data.out) <- names
+  data.out$Time <- as.character(data.out$Time)
+  t.h <- as.numeric(lapply(strsplit(data.out$Time, "\\:"), "[", 1))
+  t.m <- as.numeric(lapply(strsplit(data.out$Time, "\\:"), "[", 2))
+  data.out$Time <- round(t.h + t.m/60, 2)
+  for (i in 1:dim(data.out)[2]){
+    if (is.numeric(data.out[,i]) == FALSE){data.out[,i] = as.numeric(data.out[,i])}}
+  return(data.out)
+  }
+```
+
+
+```{r}
+BacCP <- read.synergy("~/Desktop/Peralta_48well_WRC283M_WRC281MF.csv")
+
+```
+
+
+```{r}
+BacCP$CPMean_MF <- rowMeans(BacCP[,c("D2","D4","D6")])
+BacCP$CPMean_M <- rowMeans(BacCP[,c("B2","B4","B6")])
+```
+
+
+```{r}
+dim(BacCP)
+```
+
+
+```{r}
+BacCP_graph <- BacCP[c(1,51:52)]
+```
+
+
+```{r}
+BacCP_graph_long <- pivot_longer(BacCP_graph, cols=2:3, names_to = "Treatment", values_to = "meanGrowth", values_drop_na = FALSE)
+```
+
+
+```{r}
+str(BacCP_graph_long)
+BacCP_graph_long$Treatment <- as.factor(BacCP_graph_long$Treatment)
+```
+
+
+```{r}
+summary(BacCP_graph)
+summary(BacCP_graph_long)
+```
+
+
+
+```{r}
+CP_graph <- ggplot(BacCP_graph_long, aes(x = Time, y = meanGrowth, color=Treatment)) +
+  geom_point() + geom_smooth() + theme_bw() +
+  scale_color_manual(name="Treatment", values=c("gray70", "darkgreen"), labels = c("unfertilized/mowed", "fertilized/mowed")) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
+  theme(axis.text.x = element_text(size=18,colour = "black", hjust=1),
+        axis.title.x = element_text(size=18,face="bold")) +
+  theme(axis.text.y = element_text(size=18,colour = "black"),
+        axis.title.y = element_text(size=18,face="bold")) +
+  theme(strip.text.x = element_text(size = 18,face="bold"),strip.text.y = element_text(size = 18))+
+    coord_cartesian(ylim = c(0.1,0.5))+
+  ggtitle("C. pratensis") + 
+            theme(axis.text=element_blank(), title=element_text(size=rel(1.25))) + 
+            theme(plot.title = element_text(face = "italic")) +
+  xlab("Time (hour)") + ylab("Absorbance 600 nm")
+
+CP_graph
+```
+
+
+```{r}
+str(BacCP_graph)
+```
+
+
+```{r}
+Bac_CP_M <- BacCP_graph[,-2]
+```
+
+
+```{r}
+Bac_CP_MF <- BacCP_graph[,-3]
+```
+
+
+```{r}
+GC_CP_Mfit <- SummarizeGrowth(Bac_CP_M$Time, Bac_CP_M$CPMean_M)
+
+GC_CP_Mfit
+
+plot(GC_CP_Mfit)
+```
+
+
+```{r}
+GC_CP_MFfit <- SummarizeGrowth(Bac_CP_MF$Time, Bac_CP_MF$CPMean_MF)
+
+GC_CP_MFfit
+
+plot(GC_CP_MFfit, main="C. pratensis", main="Italics", col=c("red","006600"))
+```
+
+
+```{r}
+GC_CP_MFfit$vals
+GC_CP_Mfit$vals
+```

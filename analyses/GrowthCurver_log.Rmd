@@ -1,0 +1,377 @@
+---
+title: "Log Growth Rates"
+author: "Aied Garcia"
+date: "2022-12-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls()) 
+```
+
+```{r}
+library("ggplot2")
+library("nlme")
+library("bbmle")
+library("optimx")
+require("tidyverse")
+library("tidyr")
+library("growthcurver")
+```
+
+```{r}
+read.synergy <- function(input = " ", sep = ","){
+  temp <- readLines(input, warn = F)
+  t0 <- which(grepl("0:00:00", temp))[1]
+  tf <- which(grepl("Results", temp)) - 2
+  data.in <- read.csv2(input, sep = ",", header = F)
+  names <- as.character(data.in[t0 - 1, ])
+  names[2] <- "Temp"
+  data.out <- data.in[t0:tf, ]
+  colnames(data.out) <- names
+  data.out$Time <- as.character(data.out$Time)
+  t.h <- as.numeric(lapply(strsplit(data.out$Time, "\\:"), "[", 1))
+  t.m <- as.numeric(lapply(strsplit(data.out$Time, "\\:"), "[", 2))
+  data.out$Time <- round(t.h + t.m/60, 2)
+  for (i in 1:dim(data.out)[2]){
+    if (is.numeric(data.out[,i]) == FALSE){data.out[,i] = as.numeric(data.out[,i])}}
+  return(data.out)
+  }
+```
+
+```{r}
+BacCP <- read.synergy("~/Desktop/WRC283M_WRC281MF.csv")
+```
+
+
+```{r}
+BacCP$CPMean_MF <- rowMeans(BacCP[,c("D2","D4","D6")])
+BacCP$CPMean_M <- rowMeans(BacCP[,c("B2","B4","B6")])
+```
+
+
+```{r}
+dim(BacCP)
+```
+
+
+```{r}
+BacCP_graph <- BacCP[c(1,51:52)]
+```
+
+
+```{r}
+BacCP_graph_long <- pivot_longer(BacCP_graph, cols=2:3, names_to = "Treatment", values_to = "meanGrowth", values_drop_na = FALSE)
+```
+
+
+```{r}
+str(BacCP_graph_long)
+BacCP_graph_long$Treatment <- as.factor(BacCP_graph_long$Treatment)
+```
+
+
+```{r}
+summary(BacCP_graph)
+summary(BacCP_graph_long)
+```
+
+```{r}
+str(BacCP_graph)
+```
+
+
+```{r}
+Bac_CP_M <- BacCP_graph[,-2]
+```
+
+
+```{r}
+Bac_CP_MF <- BacCP_graph[,-3]
+```
+
+```{r}
+Time <- BacCP_graph[, c(-2,-3)]
+```
+
+```{r}
+Time <- data.frame(Time)
+```
+
+
+```{r}
+GC_CP_MFit_l <- data.frame(log(Bac_CP_M$CPMean_M))
+GC_CP_MFFit_l <- data.frame(log(Bac_CP_MF$CPMean_MF))
+```
+
+```{r}
+GC_CP_Mfit_L <- cbind(Time, GC_CP_MFit_l)
+GC_CP_MFfit_L <- cbind(Time, GC_CP_MFFit_l)
+```
+
+
+```{r}
+GC_CP_MFit_lp <- SummarizeGrowth(GC_CP_Mfit_L$Time, GC_CP_Mfit_L$log.Bac_CP_M.CPMean_M.)
+
+GC_CP_MFit_lp
+
+plot(GC_CP_MFit_lp)
+
+GC_CP_MFFit_lp <- SummarizeGrowth(GC_CP_MFfit_L$Time, GC_CP_MFfit_L$log.Bac_CP_MF.CPMean_MF.)
+
+GC_CP_MFFit_lp
+
+plot(GC_CP_MFFit_lp)
+```
+
+```{r}
+GC_CP_MFit_lp$vals
+GC_CP_MFFit_lp$vals
+```
+
+
+```{r}
+BacPF <- read.synergy("~/Desktop/WRC288M_WRC246MF.csv")
+```
+
+
+```{r}
+BacPF$PFMean_MF <- rowMeans(BacPF[,c("D2","D4","D6")])
+BacPF$PFMean_M <- rowMeans(BacPF[,c("B2","B4","B6")])
+```
+
+
+```{r}
+dim(BacPF)
+```
+
+
+```{r}
+BacPF_graph <- BacPF[c(1,51:52)]
+```
+
+
+```{r}
+BacPF_graph_long <- pivot_longer(BacPF_graph, cols=2:3, names_to = "Treatment", values_to = "meanGrowth", values_drop_na = FALSE)
+```
+
+
+```{r}
+str(BacPF_graph_long)
+BacPF_graph_long$Treatment <- as.factor(BacPF_graph_long$Treatment)
+```
+
+
+```{r}
+summary(BacPF_graph)
+summary(BacPF_graph_long)
+```
+
+```{r}
+str(BacPF_graph)
+```
+
+
+```{r}
+Bac_PF_M <- BacPF_graph[,-2]
+```
+
+
+```{r}
+Bac_PF_MF <- BacPF_graph[,-3]
+```
+
+
+```{r}
+GC_PF_MFit_l <- data.frame(log(Bac_PF_M$PFMean_M))
+GC_PF_MFFit_l <- data.frame(log(Bac_PF_MF$PFMean_MF))
+```
+
+```{r}
+GC_PF_Mfit_L <- cbind(Time, GC_PF_MFit_l)
+GC_PF_MFfit_L <- cbind(Time, GC_PF_MFFit_l)
+```
+
+
+```{r}
+GC_PF_MFit_lp <- SummarizeGrowth(GC_PF_Mfit_L$Time, GC_PF_Mfit_L$log.Bac_PF_M.PFMean_M.)
+
+GC_PF_MFit_lp
+
+plot(GC_PF_MFit_lp)
+
+GC_PF_MFFit_lp <- SummarizeGrowth(GC_PF_MFfit_L$Time, GC_PF_MFfit_L$log.Bac_PF_MF.PFMean_MF.)
+
+GC_PF_MFFit_lp
+
+plot(GC_PF_MFFit_lp)
+```
+
+```{r}
+GC_PF_MFit_lp$vals
+GC_PF_MFFit_lp$vals
+```
+
+```{r}
+BacAR <- read.synergy("~/Desktop/WRC263_WRC267.csv")
+```
+
+
+```{r}
+BacAR$ARMean_MF <- rowMeans(BacAR[,c("D2","D4","D6")])
+BacAR$ARMean_M <- rowMeans(BacAR[,c("B2","B4","B6")])
+```
+
+
+```{r}
+dim(BacAR)
+```
+
+
+```{r}
+BacAR_graph <- BacAR[c(1,51:52)]
+```
+
+
+```{r}
+BacAR_graph_long <- pivot_longer(BacAR_graph, cols=2:3, names_to = "Treatment", values_to = "meanGrowth", values_drop_na = FALSE)
+```
+
+
+```{r}
+str(BacAR_graph_long)
+BacAR_graph_long$Treatment <- as.factor(BacAR_graph_long$Treatment)
+```
+
+
+```{r}
+summary(BacAR_graph)
+summary(BacAR_graph_long)
+```
+
+```{r}
+str(BacAR_graph)
+```
+
+
+```{r}
+Bac_AR_M <- BacAR_graph[,-2]
+```
+
+
+```{r}
+Bac_AR_MF <- BacAR_graph[,-3]
+```
+
+
+```{r}
+GC_AR_MFit_l <- data.frame(log(Bac_AR_M$ARMean_M))
+GC_AR_MFFit_l <- data.frame(log(Bac_AR_MF$ARMean_MF))
+```
+
+```{r}
+GC_AR_Mfit_L <- cbind(Time, GC_AR_MFit_l)
+GC_AR_MFfit_L <- cbind(Time, GC_AR_MFFit_l)
+```
+
+
+```{r}
+GC_AR_MFit_lp <- SummarizeGrowth(GC_AR_Mfit_L$Time, GC_AR_Mfit_L$log.Bac_AR_M.ARMean_M.)
+
+GC_AR_MFit_lp
+
+plot(GC_AR_MFit_lp)
+
+GC_AR_MFFit_lp <- SummarizeGrowth(GC_AR_MFfit_L$Time, GC_AR_MFfit_L$log.Bac_AR_MF.ARMean_MF.)
+
+GC_AR_MFFit_lp
+
+plot(GC_AR_MFFit_lp)
+```
+
+```{r}
+GC_AR_MFit_lp$vals
+GC_AR_MFFit_lp$vals
+```
+
+```{r}
+BacPK <- read.synergy("~/Desktop/WRC271M_WRC315MF.csv")
+```
+
+
+```{r}
+BacPK$PKMean_MF <- rowMeans(BacPK[,c("D2","D4","D6")])
+BacPK$PKMean_M <- rowMeans(BacPK[,c("B2","B4","B6")])
+```
+
+
+```{r}
+dim(BacPK)
+```
+
+
+```{r}
+BacPK_graph <- BacPK[c(1,51:52)]
+```
+
+
+```{r}
+BacPK_graph_long <- pivot_longer(BacPK_graph, cols=2:3, names_to = "Treatment", values_to = "meanGrowth", values_drop_na = FALSE)
+```
+
+
+```{r}
+str(BacPK_graph_long)
+BacPK_graph_long$Treatment <- as.factor(BacPK_graph_long$Treatment)
+```
+
+
+```{r}
+summary(BacPK_graph)
+summary(BacPK_graph_long)
+```
+
+```{r}
+str(BacPK_graph)
+```
+
+
+```{r}
+Bac_PK_M <- BacPK_graph[,-2]
+```
+
+
+```{r}
+Bac_PK_MF <- BacPK_graph[,-3]
+```
+
+
+```{r}
+GC_PK_MFit_l <- data.frame(log(Bac_PK_M$PKMean_M))
+GC_PK_MFFit_l <- data.frame(log(Bac_PK_MF$PKMean_MF))
+```
+
+```{r}
+GC_PK_Mfit_L <- cbind(Time, GC_PK_MFit_l)
+GC_PK_MFfit_L <- cbind(Time, GC_PK_MFFit_l)
+```
+
+
+```{r}
+GC_PK_MFit_lp <- SummarizeGrowth(GC_PK_Mfit_L$Time, GC_PK_Mfit_L$log.Bac_PK_M.PKMean_M.)
+
+GC_PK_MFit_lp
+
+plot(GC_PK_MFit_lp)
+
+GC_PK_MFFit_lp <- SummarizeGrowth(GC_PK_MFfit_L$Time, GC_PK_MFfit_L$log.Bac_PK_MF.PKMean_MF.)
+
+GC_PK_MFFit_lp
+
+plot(GC_PK_MFFit_lp)
+```
+
+```{r}
+GC_PK_MFit_lp$vals
+GC_PK_MFFit_lp$vals
+```
